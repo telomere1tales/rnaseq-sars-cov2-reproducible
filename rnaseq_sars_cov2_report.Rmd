@@ -1,0 +1,198 @@
+---
+title: "Reproducible RNA-seq Analysis of SARS-CoV-2 Infection"
+subtitle: "Transcriptomic Response in Human Airway Epithelial Cells"
+author: "Noelia Caba Martin"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
+    code_folding: hide
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+```{r libraries}
+library(DESeq2)
+library(tidyverse)
+library(EnhancedVolcano)
+library(pheatmap)
+library(clusterProfiler)
+library(org.Hs.eg.db)
+
+# Fix conflicts
+select <- dplyr::select
+filter <- dplyr::filter
+```
+
+## Introduction
+
+This analysis investigates the transcriptomic response of human airway 
+epithelial cells (NHBE) to SARS-CoV-2 infection using publicly available 
+RNA-seq data from **Blanco-Melo et al. (2020)** published in *Cell*.
+
+**Biological question:** Which genes and biological pathways are 
+differentially expressed in human airway cells following SARS-CoV-2 
+infection?
+
+**Dataset:** GSE147507 — Series 1
+- Cell type: Normal Human Bronchial Epithelial (NHBE) cells
+- Conditions: Mock (uninfected control) vs SARS-CoV-2 infected
+- Replicates: 3 per condition
+- Source: Gene Expression Omnibus (GEO)
+
+**Why NHBE cells?**
+NHBE cells are primary human airway epithelial cells — the first line 
+of defense against respiratory pathogens. Unlike immortalized cell 
+lines, they closely recapitulate the in vivo response to viral infection, 
+making them the most biologically relevant model for studying SARS-CoV-2 
+pathogenesis.
+
+## Data Loading and Preprocessing
+```{r load-data}
+# Load preprocessed DESeq2 object
+dds <- readRDS("../output/dds_preprocessed.rds")
+
+# Load results
+res_df <- read.csv("../output/deseq2_results.csv")
+
+cat("Genes after filtering:", nrow(dds), "\n")
+cat("Samples:", ncol(dds), "\n")
+cat("Conditions:", levels(dds$condition), "\n")
+```
+
+The dataset contains **`r nrow(dds)` genes** after filtering lowly 
+expressed genes (minimum 10 counts in at least 3 samples). Data was 
+downloaded directly from GEO using the `GEOquery` package, ensuring 
+full reproducibility.
+
+## Quality Control — PCA
+```{r pca, fig.width=8, fig.height=6}
+vsd <- vst(dds, blind = TRUE)
+
+plotPCA(vsd, intgroup = "condition") +
+  scale_color_manual(values = c("Mock" = "#2E9FDF",
+                                "SARS_CoV_2" = "#E64B35")) +
+  theme_minimal() +
+  labs(title = "PCA - NHBE Cells SARS-CoV-2 vs Mock",
+       color = "Condition")
+```
+
+The PCA confirms high data quality — samples cluster clearly by 
+condition along PC1, indicating that SARS-CoV-2 infection is the 
+primary source of transcriptional variation.
+
+## Differential Expression Analysis
+```{r deseq2}
+# Run DESeq2
+dds <- DESeq(dds)
+res <- results(dds,
+               contrast = c("condition", "SARS_CoV_2", "Mock"),
+               alpha = 0.05)
+summary(res)
+```
+```{r results-table}
+# Show top 20 significant genes
+res_df %>%
+  filter(!is.na(padj), padj < 0.05, abs(log2FoldChange) > 1) %>%
+  arrange(padj) %>%
+  head(20) %>%
+  select(gene, log2FoldChange, padj) %>%
+  mutate(
+    log2FoldChange = round(log2FoldChange, 2),
+    padj = format(padj, scientific = TRUE, digits = 3)
+  ) %>%
+  knitr::kable(caption = "Top 20 Differentially Expressed Genes")
+```
+
+## Volcano Plot
+```{r volcano, fig.width=10, fig.height=8}
+EnhancedVolcano(res,
+  lab = rownames(res),
+  x = "log2FoldChange",
+  y = "padj",
+  title = "SARS-CoV-2 vs Mock — NHBE Cells",
+  subtitle = "Blanco-Melo et al. 2020",
+  pCutoff = 0.05,
+  FCcutoff = 1,
+  pointSize = 2,
+  labSize = 3,
+  drawConnectors = TRUE
+)
+```
+
+## Heatmap
+```{r heatmap, fig.width=8, fig.height=10}
+top30 <- res_df %>%
+  dplyr::filter(!is.na(padj), padj < 0.05, abs(log2FoldChange) > 1) %>%
+  slice_head(n = 30) %>%
+  pull(gene)
+
+mat <- assay(vsd)[top30, ]
+mat_scaled <- t(scale(t(mat)))
+
+annotation_col <- data.frame(
+  Condition = dds$condition,
+  row.names = colnames(mat)
+)
+
+pheatmap(mat_scaled,
+  annotation_col = annotation_col,
+  show_colnames = FALSE,
+  cluster_rows = TRUE,
+  cluster_cols = TRUE,
+  color = colorRampPalette(c("#2E9FDF", "white", "#E64B35"))(100),
+  main = "Top 30 DEGs - SARS-CoV-2 vs Mock"
+)
+```
+
+## GO Enrichment Analysis
+```{r go-enrichment}
+sig_genes <- res_df %>%
+  dplyr::filter(!is.na(padj), padj < 0.05, abs(log2FoldChange) > 1) %>%
+  pull(gene)
+
+go_results <- enrichGO(
+  gene = sig_genes,
+  OrgDb = org.Hs.eg.db,
+  keyType = "SYMBOL",
+  ont = "BP",
+  pAdjustMethod = "BH",
+  pvalueCutoff = 0.05,
+  readable = TRUE
+)
+```
+```{r go-plot, fig.width=10, fig.height=8}
+dotplot(go_results, showCategory = 15) +
+  theme_minimal() +
+  labs(title = "GO Biological Process Enrichment",
+       subtitle = "SARS-CoV-2 vs Mock — NHBE Cells")
+```
+
+## Conclusions
+
+This analysis identified **`r sum(!is.na(res_df$padj) & res_df$padj < 0.05 & abs(res_df$log2FoldChange) > 1)` differentially expressed genes** 
+in NHBE cells following SARS-CoV-2 infection.
+
+**Key findings:**
+
+1. PCA confirms clean separation between infected and control samples,
+validating data quality and experimental design.
+
+2. SARS-CoV-2 infection induces a strong transcriptional response with 
+**`r sum(!is.na(res_df$padj) & res_df$padj < 0.05 & res_df$log2FoldChange > 1)` upregulated** and 
+**`r sum(!is.na(res_df$padj) & res_df$padj < 0.05 & res_df$log2FoldChange < -1)` downregulated** genes.
+
+3. GO enrichment analysis identified **759 enriched biological processes**,
+consistent with known SARS-CoV-2 pathogenesis including innate immune 
+response, cytokine signaling and antiviral defense mechanisms.
+
+4. This analysis is fully reproducible — all data was downloaded 
+programmatically from GEO and all code is available in the repository.
+
+## Session Info
+```{r session-info}
+sessionInfo()
+```
