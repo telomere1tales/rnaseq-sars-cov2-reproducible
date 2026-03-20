@@ -66,9 +66,8 @@ rmarkdown::render("report/rnaseq_sars_cov2_report.Rmd")
 ## 🏗️ Repository Structure
 ```
 rnaseq_sars_cov2/
-├── data/                  # Raw and processed data
 ├── R/
-│   ├── 01_load_data.R     # Download data from GEO
+│   ├── 01_load_data.R     # Download data from GEO (run first)
 │   ├── 02_preprocessing.R # DESeq2 object and filtering
 │   └── 03_analysis.R      # DEA, visualizations, GO enrichment
 ├── output/                # Results tables
@@ -77,6 +76,8 @@ rnaseq_sars_cov2/
 └── renv.lock              # Exact package versions
 ```
 
+> **Note:** Raw data is not included in this repository. 
+> Run `R/01_load_data.R` to download it automatically from GEO.
 ---
 
 ## ⚙️ Methodology
