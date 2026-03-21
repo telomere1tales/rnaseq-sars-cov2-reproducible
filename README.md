@@ -69,8 +69,8 @@ rmarkdown::render("report/rnaseq_sars_cov2_report.Rmd")
 ```
 rnaseq_sars_cov2/
 ├── R/
-│   ├── 01_load_data.R     # Download data from GEO (run first)
-│   ├── 02_preprocessing.R # DESeq2 object and filtering
+│   ├── 01_load_data.R     # Download data from GEO (run first) and creates count matrix and metadata
+│   ├── 02_preprocessing.R # DESeq2 object, filtering and normalization
 │   └── 03_analysis.R      # DEA, visualizations, GO enrichment
 ├── output/                # Results tables
 ├── figs/                  # Generated figures
