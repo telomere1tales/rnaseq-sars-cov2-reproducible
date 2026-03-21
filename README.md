@@ -10,7 +10,7 @@ in human airway epithelial cells.
 By analyzing transcriptomic data from **Blanco-Melo et al. (2020)** — 
 one of the most cited COVID-19 transcriptomics studies — the project 
 identifies differentially expressed genes and biological patterns linked 
-to the host response during infection.
+to the host response during infection. 
 
 The workflow emphasizes **reproducibility, transparency, and biological 
 interpretability** — critical in modern bioinformatics research.
@@ -19,9 +19,9 @@ interpretability** — critical in modern bioinformatics research.
 
 ## 🎯 Objective
 
-To analyze RNA-seq data from SARS-CoV-2 infection and identify gene 
-expression changes that provide insight into disease-related biological 
-processes.
+To identify differentially expressed genes and explore biological processes 
+involved in the host response to SARS-CoV-2 infection using a reproducible 
+RNA-seq workflow.
 
 ---
 
@@ -30,9 +30,11 @@ processes.
 SARS-CoV-2 infection triggers complex molecular responses in host cells. 
 Understanding these responses through RNA sequencing allows us to:
 
-- Identify genes upregulated or downregulated during infection
-- Explore innate immune response mechanisms
-- Detect potential biomarkers or therapeutic targets
+- Identifying key genes involved in infection
+- Understanding disease mechanisms
+- Highlighting potential therapeutic targets
+
+RNA-seq provides a powerful approach to capture these transcriptional changes and study how cells react to viral exposure.
 
 **Dataset:** GSE147507 — Series 1
 - **Cell type:** Normal Human Bronchial Epithelial (NHBE) — primary 
@@ -105,6 +107,21 @@ rnaseq_sars_cov2/
 **Top upregulated genes:** CCL20, SAA2, SAA1, IL36G — consistent with 
 innate immune and inflammatory response to SARS-CoV-2.
 
+The pipeline generates key transcriptomic outputs, including:
+
+Differentially expressed genes (DEGs)
+
+Statistical significance measures
+
+Expression patterns across conditions
+
+## Visualizations
+
+- Volcano plot — highlights significantly upregulated and downregulated genes
+
+- Heatmap — shows expression patterns across samples
+
+- PCA plot — visualizes sample clustering and variability
 ---
 
 ## 🧠 Key Insights
